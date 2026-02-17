@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>견적서 빌더</title>
+  <style>
+    :root { --gap: 12px; --bd: #e5e7eb; --fg:#111827; --mut:#6b7280; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Apple SD Gothic Neo, sans-serif; color:var(--fg); background:#fafafa; }
+    header { position: sticky; top:0; z-index:10; background:white; border-bottom:1px solid var(--bd); }
+    .wrap { max-width: 1200px; margin:0 auto; padding: 14px 16px; }
+    h1 { margin:0; font-size: 18px; }
+    .row { display:flex; gap: var(--gap); align-items:center; flex-wrap: wrap; margin-top: 10px; }
+    .row > * { flex: 0 0 auto; }
+    .btn { border:1px solid var(--bd); background:white; padding: 8px 10px; border-radius: 8px; cursor:pointer; }
+    .btn.primary { background:#111827; color:white; border-color:#111827; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    input, select, textarea { border:1px solid var(--bd); border-radius: 8px; padding: 8px 10px; background:white; }
+    input[type="number"] { width: 90px; }
+    textarea { width: 100%; min-height: 70px; resize: vertical; }
+    .grid { display:grid; grid-template-columns: 1.1fr .9fr; gap: var(--gap); padding: 16px; max-width: 1200px; margin:0 auto; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    .card { background:white; border:1px solid var(--bd); border-radius: 12px; overflow:hidden; }
+    .card-h { padding: 12px 14px; border-bottom: 1px solid var(--bd); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .card-h .sub { color:var(--mut); font-size:12px; }
+    .card-b { padding: 12px 14px; }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid var(--bd); padding: 8px 6px; text-align:left; vertical-align: top; }
+    .table th { font-size:12px; color:var(--mut); font-weight:600; }
+    .table td { font-size: 13px; }
+    .pill { display:inline-flex; gap:6px; align-items:center; border:1px solid var(--bd); padding: 3px 8px; border-radius: 999px; font-size: 12px; color: var(--mut); }
+    .mut { color: var(--mut); }
+    .right { text-align:right; }
+    .k { white-space:nowrap; }
+    .clickable { cursor:pointer; }
+    .clickable:hover { background:#f9fafb; }
+    .totalBox { display:grid; gap:8px; }
+    .line { display:flex; justify-content:space-between; gap:10px; }
+    .big { font-size: 18px; font-weight: 800; }
+    .badge { font-size:11px; border:1px solid var(--bd); border-radius: 6px; padding:2px 6px; color:var(--mut); }
+    .sep { height:1px; background: var(--bd); margin: 10px 0; }
+    .print-only { display:none; }
+    .small { font-size:12px; color:var(--mut); }
+    a { color: inherit; }
+
+    /* =========================================================
+       ✅ 상품리스트(#itemsTable) 열 너비 조절 구간
+       - 여기 숫자(px)만 바꾸면 됨
+       ========================================================= */
+
+    /* 1열: 카테고리 */
+    #itemsTable th:nth-child(1),
+    #itemsTable td:nth-child(1){
+      width: 50px;
+      max-width: 50px;
+      white-space: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 2열: 제조사 (✅ 길면 줄바꿈되게) */
+    #itemsTable th:nth-child(2),
+    #itemsTable td:nth-child(2){
+      width: 100px;          /* 제조사 너비(여기 조절) */
+      max-width: 100px;
+      white-space: normal;   /* ✅ 줄바꿈 허용 */
+      word-break: break-word;/* ✅ 단어가 길어도 줄바꿈 */
+    }
+
+    /* 3열: 장비(설명 포함) */
+    #itemsTable th:nth-child(3),
+    #itemsTable td:nth-child(3){
+      width: 400px;          /* ✅ 장비 열 너비(여기 조절) */
+      max-width: 400px;
+    }
+    #itemsTable td:nth-child(3){
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    /* 4열: 모델 */
+    #itemsTable th:nth-child(4),
+    #itemsTable td:nth-child(4){
+      width: 100px;          /* ✅ 모델 열 너비(여기 조절) */
+      max-width: 100px;
+      white-space: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 5열: 단가 */
+    #itemsTable th:nth-child(5),
+    #itemsTable td:nth-child(5){
+      width: 110px;
+      max-width: 110px;
+      white-space: nowrap;
+    }
+
+    /* 6열: 링크 */
+    #itemsTable th:nth-child(6),
+    #itemsTable td:nth-child(6){
+      width: 70px;
+      max-width: 70px;
+      white-space: nowrap;
+    }
+
+    /* 미리보기 모달 */
+    .modal {
+      position: fixed; inset: 0; display:none;
+      background: rgba(0,0,0,.45);
+      z-index: 9999;
+      padding: 18px;
+    }
+    .modal.open { display:block; }
+    .modal-card {
+      max-width: 980px; margin: 0 auto; background: #fff; border-radius: 12px;
+      border: 1px solid var(--bd); overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+    }
+    .modal-h {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding: 10px 12px; border-bottom: 1px solid var(--bd);
+      background: #fff;
+    }
+    .modal-b { padding: 12px 14px; max-height: calc(100vh - 160px); overflow:auto; }
+    .modal-title { font-weight: 800; }
+    .ghost { background:#fff; }
+
+    /* 인쇄(PDF) 전용: 견적서만 출력 */
+    @media print{
+      header, .no-print { display:none !important; }
+      body { background:white; }
+      .grid { grid-template-columns: 1fr !important; padding: 0; margin:0; }
+      .items-panel { display:none !important; }
+      .quote-panel { display:block !important; }
+      .card { border:0; border-radius:0; }
+      .card-h { border-bottom: 1px solid #ddd; }
+      .print-only { display:block !important; }
+      .sep { background:#ddd; }
+      .modal { display:none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div>
+          <h1>민PD 견적서 작성 시스템</h1>
+          <div class="small">민PD 견적서 시스템</div>
+        </div>
+        <div class="row no-print" style="margin:0;">
+          <button class="btn" id="btnReload">새로고침(상품)</button>
+          <button class="btn" id="btnSave">저장</button>
+          <button class="btn" id="btnLoad">불러오기</button>
+          <button class="btn" id="btnPreview">견적서 미리보기</button>
+          <button class="btn primary" id="btnPrint">인쇄/PDF</button>
+        </div>
+      </div>
+
+      <div class="row no-print">
+        <label class="pill">검색
+          <input id="q" placeholder="카테고리/제조사/장비/모델/스펙/비고" style="width: 280px;" />
+        </label>
+        <label class="pill">카테고리
+          <select id="cat"></select>
+        </label>
+        <span class="pill"><span class="mut">상품</span> <b id="cntItems">0</b></span>
+        <span class="pill"><span class="mut">담김</span> <b id="cntCart">0</b></span>
+        <span class="pill"><span class="mut">로드</span> <b id="lastLoaded">미로딩</b></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- 좌: 상품 리스트 -->
+    <section class="card items-panel">
+      <div class="card-h">
+        <div>
+          <div style="font-weight:800;">상품 리스트</div>
+          <div class="sub">행 클릭 → 우측 견적에 담김</div>
+        </div>
+        <div class="badge no-print"></div>
+      </div>
+      <div class="card-b">
+        <table class="table" id="itemsTable">
+          <thead>
+            <tr>
+              <th class="k">카테고리</th>
+              <th class="k">제조사</th>
+              <th>장비</th>
+              <th class="k">모델</th>
+              <th class="right k">단가</th>
+              <th class="k">링크</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTbody"></tbody>
+        </table>
+
+        <div class="small mut" style="margin-top:10px;">
+        </div>
+      </div>
+    </section>
+
+    <!-- 우: 견적서 -->
+    <section class="card quote-panel">
+      <div class="card-h">
+        <div>
+          <div style="font-weight:800;">견적서</div>
+          <div class="sub print-only">※ 출력/PDF 저장용</div>
+        </div>
+        <div class="no-print">
+          <button class="btn" id="btnClear">비우기</button>
+        </div>
+      </div>
+
+      <div class="card-b">
+        <div class="no-print" style="display:grid; gap:10px;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <label class="pill" style="justify-content:space-between;">
+              고객/현장
+              <input id="client" placeholder="예: OO교회 방송실" style="width: 68%;" />
+            </label>
+            <label class="pill" style="justify-content:space-between;">
+              견적일
+              <input id="date" type="date" style="width: 68%;" />
+            </label>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <label class="pill" style="justify-content:space-between;">
+              할인(%)
+              <input id="discount" type="number" min="0" step="0.1" value="0" style="width: 68%;" />
+            </label>
+            <label class="pill" style="justify-content:space-between;">
+              VAT 적용
+              <select id="vatMode" style="width: 68%;">
+                <option value="taxable">전체 과세(VAT 10%)</option>
+                <option value="taxfree">전체 면세(VAT 없음)</option>
+              </select>
+            </label>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label class="pill" style="gap:8px;">
+              <input type="checkbox" id="showLinks" checked />
+              견적서에 링크 표시
+            </label>
+            <span class="small mut">* 링크는 “링크(선택)” 값이 있는 항목만 표시됩니다.</span>
+          </div>
+
+          <div>
+            <div class="small mut" style="margin-bottom:6px;">메모(견적 조건/납기/설치/보증 등)</div>
+            <textarea id="memo" placeholder="예: 설치비 별도 / 납기 2주 / 보증 1년"></textarea>
+          </div>
+
+          <div class="sep"></div>
+        </div>
+
+        <table class="table" id="cartTable">
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th class="k">수량</th>
+              <th class="right k">금액</th>
+              <th class="k no-print">삭제</th>
+            </tr>
+          </thead>
+          <tbody id="cartTbody"></tbody>
+        </table>
+
+        <div class="sep"></div>
+
+        <div class="totalBox">
+          <div class="line">
+            <span class="mut">소계</span>
+            <b id="subTotal">0</b>
+          </div>
+          <div class="line">
+            <span class="mut">할인</span>
+            <b id="discountAmt">0</b>
+          </div>
+
+          <div class="line" id="vatLine">
+            <span class="mut">VAT</span>
+            <b id="vatAmt">0</b>
+          </div>
+
+          <div class="line">
+            <span class="big">총액</span>
+            <span class="big" id="grandTotal">0</span>
+          </div>
+          <div class="small mut" id="vatHint"></div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="print-only">
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <div>
+              <div><b id="pClient"></b></div>
+              <div class="small mut">견적일: <span id="pDate"></span></div>
+            </div>
+            <div style="text-align:right;">
+              <div class="small mut">견적서</div>
+              <div class="small mut" id="pMode"></div>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="small" id="pMemo"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 미리보기 모달 -->
+  <div class="modal" id="previewModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-h">
+        <div class="modal-title">견적서 미리보기</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn ghost" id="btnPreviewPrint">이대로 인쇄/PDF</button>
+          <button class="btn" id="btnPreviewClose">닫기</button>
+        </div>
+      </div>
+      <div class="modal-b" id="previewBody"></div>
+    </div>
+  </div>
+
+<script>
+const TSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRkUM-YROYLYsRZwebKW1_BB-f4wZiOJbdbFlclc-L7jRGdaiOzZKQqMFKNTh9NZUiADDKwNrNEuR2Z/pub?gid=849352929&single=true&output=tsv";
+
+let items = [];
+let filtered = [];
+let cart = [];
+let itemsByKey = new Map();
+
+const el = (id) => document.getElementById(id);
+
+function todayISO(){
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - off*60000);
+  return local.toISOString().slice(0,10);
+}
+function fmt(n){
+  const x = Number(n || 0);
+  return x.toLocaleString("ko-KR");
+}
+function norm(s){
+  return String(s ?? "").trim();
+}
+function toNum(v){
+  const n = Number(String(v ?? "").replace(/,/g,"").replace(/[^\d.-]/g,"").trim());
+  return Number.isFinite(n) ? n : 0;
+}
+function makeKey(row){
+  return [row.category, row.maker, row.equipment, row.model, row.price].map(norm).join("|");
+}
+
+async function loadTSV(url){
+  const res = await fetch(url, { cache: "no-store" });
+  if(!res.ok) throw new Error("TSV fetch 실패: " + res.status);
+  const text = await res.text();
+  return parseTSV_KOHeaders(text);
+}
+
+function parseTSV_KOHeaders(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.trim().length);
+  if(lines.length < 2) return [];
+  const headers = lines[0].split("\t").map(h => h.trim());
+
+  const map = {
+    "카테고리": "category",
+    "제조사": "maker",
+    "장비": "equipment",
+    "모델": "model",
+    "단가": "price",
+    "스펙": "spec",
+    "비고(설명)": "note",
+    "링크(선택)": "link"
+  };
+
+  const idx = {};
+  headers.forEach((h, i)=>{
+    const key = map[h];
+    if(key) idx[key] = i;
+  });
+
+  const required = ["category","maker","equipment","model","price"];
+  const missing = required.filter(k => idx[k] == null);
+  if(missing.length){
+    throw new Error(
+      "헤더가 예상과 다릅니다.\n" +
+      "필요 헤더: 카테고리, 제조사, 장비, 모델, 단가, 스펙, 비고(설명), 링크(선택)\n" +
+      "현재 헤더: " + headers.join(", ")
+    );
+  }
+
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].split("\t");
+    const obj = {
+      category: norm(cols[idx.category] ?? ""),
+      maker: norm(cols[idx.maker] ?? ""),
+      equipment: norm(cols[idx.equipment] ?? ""),
+      model: norm(cols[idx.model] ?? ""),
+      price: toNum(cols[idx.price] ?? ""),
+      spec: (idx.spec != null) ? norm(cols[idx.spec] ?? "") : "",
+      note: (idx.note != null) ? norm(cols[idx.note] ?? "") : "",
+      link: (idx.link != null) ? norm(cols[idx.link] ?? "") : ""
+    };
+    if(!obj.category && !obj.equipment && !obj.model && !obj.maker) continue;
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function renderCategoryOptions(){
+  const cats = Array.from(new Set(items.map(x => x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,"ko"));
+  const sel = el("cat");
+  sel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "전체";
+  sel.appendChild(optAll);
+  cats.forEach(c=>{
+    const o = document.createElement("option");
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+
+function applyFilter(){
+  const cat = el("cat").value;
+  const q = norm(el("q").value).toLowerCase();
+  filtered = items.filter(row=>{
+    if(cat && row.category !== cat) return false;
+    if(!q) return true;
+    const hay = [row.category,row.maker,row.equipment,row.model,row.spec,row.note].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+  el("cntItems").textContent = filtered.length;
+  renderItemsTable();
+}
+
+function renderItemsTable(){
+  const tb = el("itemsTbody");
+  tb.innerHTML = "";
+  filtered.forEach(row=>{
+    const tr = document.createElement("tr");
+    tr.className = "clickable";
+    tr.title = "클릭해서 견적에 담기";
+    tr.addEventListener("click", ()=> addToCart(row));
+    tr.innerHTML = `
+      <td class="k">${escapeHtml(row.category || "")}</td>
+      <td>${escapeHtml(row.maker || "")}</td>
+      <td>
+        <div style="font-weight:800;">${escapeHtml(row.equipment || "")}</div>
+        <div class="small mut">${escapeHtml(row.model || "")}</div>
+        ${row.spec ? `<div class="small mut">스펙: ${escapeHtml(row.spec)}</div>` : ""}
+        ${row.note ? `<div class="small mut">비고: ${escapeHtml(row.note)}</div>` : ""}
+      </td>
+      <td class="k">${escapeHtml(row.model || "")}</td>
+      <td class="right k"><b>${fmt(row.price)}</b></td>
+      <td class="k">${row.link ? `<a href="${escapeAttr(row.link)}" target="_blank" rel="noopener">링크</a>` : `<span class="mut">-</span>`}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function renderCart(){
+  const tb = el("cartTbody");
+  const showLinks = !!el("showLinks").checked;
+
+  tb.innerHTML = "";
+  cart.forEach(line=>{
+    const row = itemsByKey.get(line.key);
+    if(!row) return;
+    const amt = row.price * line.qty;
+
+    const linkHtml = (showLinks && row.link)
+      ? `<div class="small"><a href="${escapeAttr(row.link)}" target="_blank" rel="noopener">링크</a></div>`
+      : "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:800;">${escapeHtml(row.equipment)}</div>
+        <div class="small mut">${escapeHtml(row.maker ? (row.maker + " · " + row.model) : row.model)}</div>
+        <div class="small mut">${escapeHtml(row.category)}</div>
+        ${row.spec ? `<div class="small mut">스펙: ${escapeHtml(row.spec)}</div>` : ""}
+        ${row.note ? `<div class="small mut">비고: ${escapeHtml(row.note)}</div>` : ""}
+        ${linkHtml}
+      </td>
+      <td class="k">
+        <input type="number" min="1" step="1" value="${line.qty}" data-key="${escapeAttr(line.key)}" class="qtyInput" />
+      </td>
+      <td class="right k"><b>${fmt(amt)}</b></td>
+      <td class="k no-print"><button class="btn" data-del="${escapeAttr(line.key)}">삭제</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  tb.querySelectorAll(".qtyInput").forEach(inp=>{
+    inp.addEventListener("change", (e)=>{
+      const key = e.target.getAttribute("data-key");
+      let v = toNum(e.target.value);
+      if(v < 1) v = 1;
+      e.target.value = v;
+      const idx = cart.findIndex(x=>x.key===key);
+      if(idx>=0){ cart[idx].qty = v; persistCartOnly(); recalc(); renderCart(); }
+    });
+  });
+
+  tb.querySelectorAll("button[data-del]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      const key = e.target.getAttribute("data-del");
+      cart = cart.filter(x=>x.key!==key);
+      persistCartOnly();
+      recalc();
+      renderCart();
+      el("cntCart").textContent = cart.length;
+    });
+  });
+
+  el("cntCart").textContent = cart.length;
+}
+
+function recalc(){
+  const discountPct = Math.max(0, toNum(el("discount").value));
+  const vatMode = el("vatMode").value;
+
+  let sub = 0;
+  cart.forEach(line=>{
+    const row = itemsByKey.get(line.key);
+    if(!row) return;
+    sub += (row.price * line.qty);
+  });
+
+  const discountAmt = sub * (discountPct / 100);
+  const afterDiscount = Math.max(0, sub - discountAmt);
+
+  const vat = (vatMode === "taxable") ? Math.round(afterDiscount * 0.1) : 0;
+  const grand = Math.round(afterDiscount + vat);
+
+  el("subTotal").textContent = fmt(Math.round(sub));
+  el("discountAmt").textContent = "-" + fmt(Math.round(discountAmt));
+  el("vatAmt").textContent = fmt(vat);
+  el("grandTotal").textContent = fmt(grand);
+
+  el("vatLine").style.display = (vatMode === "taxable") ? "flex" : "none";
+  el("vatHint").textContent = (vatMode === "taxable") ? "VAT 10% (전체 과세 기준)." : "면세(VAT 없음).";
+
+  el("pClient").textContent = norm(el("client").value) || "고객/현장";
+  el("pDate").textContent = norm(el("date").value) || todayISO();
+  el("pMode").textContent = (vatMode === "taxable") ? "전체 과세" : "전체 면세";
+  el("pMemo").textContent = norm(el("memo").value) || "";
+}
+
+function addToCart(row){
+  const key = makeKey(row);
+  const idx = cart.findIndex(x=>x.key===key);
+  if(idx>=0) cart[idx].qty += 1;
+  else cart.push({ key, qty: 1 });
+
+  persistCartOnly();
+  renderCart();
+  recalc();
+}
+
+const LS_KEY = "quote_builder_state_v3_maker";
+const LS_CART = "quote_builder_cart_v3_maker";
+
+function persistAll(){
+  const state = {
+    client: el("client").value,
+    date: el("date").value,
+    discount: el("discount").value,
+    vatMode: el("vatMode").value,
+    memo: el("memo").value,
+    showLinks: !!el("showLinks").checked,
+    cart
+  };
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+}
+function persistCartOnly(){
+  localStorage.setItem(LS_CART, JSON.stringify(cart));
+}
+function loadSaved(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw) return false;
+  try{
+    const s = JSON.parse(raw);
+    el("client").value = s.client ?? "";
+    el("date").value = s.date ?? todayISO();
+    el("discount").value = s.discount ?? "0";
+    el("vatMode").value = s.vatMode ?? "taxable";
+    el("memo").value = s.memo ?? "";
+    el("showLinks").checked = (s.showLinks ?? true);
+    cart = Array.isArray(s.cart) ? s.cart : [];
+    persistCartOnly();
+    renderCart();
+    recalc();
+    return true;
+  }catch(e){ return false; }
+}
+function loadCartOnly(){
+  const raw = localStorage.getItem(LS_CART);
+  if(!raw) return false;
+  try{
+    const c = JSON.parse(raw);
+    cart = Array.isArray(c) ? c : [];
+    renderCart();
+    recalc();
+    return true;
+  }catch(e){ return false; }
+}
+
+function buildPreviewHTML(){
+  const client = escapeHtml(norm(el("client").value) || "고객/현장");
+  const date = escapeHtml(norm(el("date").value) || todayISO());
+  const mode = escapeHtml(el("vatMode").value === "taxable" ? "전체 과세" : "전체 면세");
+  const memo = escapeHtml(norm(el("memo").value) || "");
+  const showLinks = !!el("showLinks").checked;
+
+  let rowsHtml = "";
+  cart.forEach(line=>{
+    const row = itemsByKey.get(line.key);
+    if(!row) return;
+    const amt = row.price * line.qty;
+    const linkHtml = (showLinks && row.link)
+      ? `<div class="small"><a href="${escapeAttr(row.link)}" target="_blank" rel="noopener">링크</a></div>`
+      : "";
+
+    rowsHtml += `
+      <tr>
+        <td>
+          <div style="font-weight:800;">${escapeHtml(row.equipment)}</div>
+          <div class="small mut">${escapeHtml(row.maker ? (row.maker + " · " + row.model) : row.model)}</div>
+          <div class="small mut">${escapeHtml(row.category)}</div>
+          ${row.spec ? `<div class="small mut">스펙: ${escapeHtml(row.spec)}</div>` : ""}
+          ${row.note ? `<div class="small mut">비고: ${escapeHtml(row.note)}</div>` : ""}
+          ${linkHtml}
+        </td>
+        <td class="k">${escapeHtml(String(line.qty))}</td>
+        <td class="right k"><b>${fmt(amt)}</b></td>
+      </tr>
+    `;
+  });
+
+  const discountPct = Math.max(0, toNum(el("discount").value));
+  let sub = 0;
+  cart.forEach(line=>{
+    const row = itemsByKey.get(line.key);
+    if(!row) return;
+    sub += row.price * line.qty;
+  });
+  const discountAmt = sub * (discountPct / 100);
+  const afterDiscount = Math.max(0, sub - discountAmt);
+  const vatMode = el("vatMode").value;
+  const vat = (vatMode === "taxable") ? Math.round(afterDiscount * 0.1) : 0;
+  const grand = Math.round(afterDiscount + vat);
+
+  const vatLineHtml = (vatMode === "taxable")
+    ? `<div class="line"><span class="mut">VAT</span><b>${fmt(vat)}</b></div>`
+    : "";
+
+  return `
+    <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+      <div>
+        <div style="font-weight:900; font-size:18px;">견적서</div>
+        <div class="small mut">${client}</div>
+        <div class="small mut">견적일: ${date}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="small mut">${mode}</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th class="k">수량</th>
+          <th class="right k">금액</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || `<tr><td class="mut" colspan="3">담긴 항목이 없습니다.</td></tr>`}
+      </tbody>
+    </table>
+
+    <div class="sep"></div>
+
+    <div class="totalBox">
+      <div class="line"><span class="mut">소계</span><b>${fmt(Math.round(sub))}</b></div>
+      <div class="line"><span class="mut">할인</span><b>-${fmt(Math.round(discountAmt))}</b></div>
+      ${vatLineHtml}
+      <div class="line"><span class="big">총액</span><span class="big">${fmt(grand)}</span></div>
+    </div>
+
+    ${memo ? `<div class="sep"></div><div class="small"><b>메모</b><div class="small mut" style="margin-top:6px;">${memo.replace(/\n/g,"<br>")}</div></div>` : ""}
+  `;
+}
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+function escapeAttr(s){
+  return escapeHtml(s).replace(/`/g,"&#96;");
+}
+
+async function loadAndRender(){
+  el("lastLoaded").textContent = "로딩중";
+  items = await loadTSV(TSV_URL);
+
+  itemsByKey = new Map();
+  items.forEach(r=>{
+    const k = makeKey(r);
+    itemsByKey.set(k, r);
+  });
+
+  renderCategoryOptions();
+  filtered = items.slice();
+  el("cntItems").textContent = filtered.length;
+
+  renderItemsTable();
+  renderCart();
+  recalc();
+
+  el("lastLoaded").textContent = new Date().toLocaleString("ko-KR");
+}
+
+async function bootstrap(){
+  el("date").value = todayISO();
+
+  el("cat").addEventListener("change", applyFilter);
+  el("q").addEventListener("input", applyFilter);
+
+  ["client","date","discount","vatMode","memo"].forEach(id=>{
+    el(id).addEventListener("input", ()=>{ persistAll(); recalc(); });
+    el(id).addEventListener("change", ()=>{ persistAll(); recalc(); });
+  });
+
+  el("showLinks").addEventListener("change", ()=>{
+    persistAll();
+    renderCart();
+  });
+
+  el("btnReload").addEventListener("click", async ()=>{
+    try { await loadAndRender(); }
+    catch(e){ console.error(e); alert("로드 실패:\n" + (e?.message || e)); el("lastLoaded").textContent = "로드 실패"; }
+  });
+
+  el("btnClear").addEventListener("click", ()=>{
+    cart = [];
+    persistCartOnly();
+    renderCart();
+    recalc();
+  });
+
+  el("btnSave").addEventListener("click", ()=>{
+    persistAll();
+    alert("저장 완료(localStorage).");
+  });
+
+  el("btnLoad").addEventListener("click", ()=>{
+    const ok = loadSaved() || loadCartOnly();
+    alert(ok ? "불러오기 완료." : "저장된 데이터가 없습니다.");
+  });
+
+  el("btnPreview").addEventListener("click", ()=>{
+    recalc();
+    el("previewBody").innerHTML = buildPreviewHTML();
+    openPreview();
+  });
+  el("btnPreviewClose").addEventListener("click", closePreview);
+  el("previewModal").addEventListener("click", (e)=>{
+    if(e.target && e.target.id === "previewModal") closePreview();
+  });
+  el("btnPreviewPrint").addEventListener("click", ()=>{
+    closePreview();
+    recalc();
+    window.print();
+  });
+
+  el("btnPrint").addEventListener("click", ()=>{
+    recalc();
+    window.print();
+  });
+
+  try { await loadAndRender(); }
+  catch(e){ console.error(e); alert("로드 실패:\n" + (e?.message || e)); el("lastLoaded").textContent = "로드 실패"; }
+
+  loadCartOnly();
+  loadSaved();
+  recalc();
+}
+
+function openPreview(){
+  el("previewModal").classList.add("open");
+  el("previewModal").setAttribute("aria-hidden","false");
+}
+function closePreview(){
+  el("previewModal").classList.remove("open");
+  el("previewModal").setAttribute("aria-hidden","true");
+}
+
+bootstrap();
+</script>
+</body>
+</html>
